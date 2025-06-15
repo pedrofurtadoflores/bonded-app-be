@@ -1,4 +1,4 @@
-package com.bonded.app;
+package br.com.pedrofurtadoflores.bondedappbackend;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
