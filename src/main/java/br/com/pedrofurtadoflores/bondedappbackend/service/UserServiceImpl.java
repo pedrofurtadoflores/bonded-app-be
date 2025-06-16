@@ -5,6 +5,7 @@ import br.com.pedrofurtadoflores.bondedappbackend.dto.response.UserResponseDTO;
 import br.com.pedrofurtadoflores.bondedappbackend.model.User;
 import br.com.pedrofurtadoflores.bondedappbackend.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,15 +15,16 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository repository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserServiceImpl(UserRepository repository) {
+    public UserServiceImpl(UserRepository repository, PasswordEncoder passwordEncoder) {
         this.repository = repository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     public List<UserResponseDTO> getAll() {
-        return repository.findAll()
-                .stream()
+        return repository.findAll().stream()
                 .map(this::toResponseDTO)
                 .collect(Collectors.toList());
     }
@@ -36,7 +38,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponseDTO create(UserRequestDTO dto) {
-        User saved = repository.save(toEntity(dto));
+        User user = toEntity(dto);
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        User saved = repository.save(user);
         return toResponseDTO(saved);
     }
 
@@ -47,10 +51,13 @@ public class UserServiceImpl implements UserService {
 
         existing.setName(dto.getName());
         existing.setEmail(dto.getEmail());
-        existing.setPassword(dto.getPassword());
         existing.setGender(dto.getGender());
         existing.setBirthDate(dto.getBirthDate());
         existing.setAvatarUrl(dto.getAvatarUrl());
+
+        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+            existing.setPassword(passwordEncoder.encode(dto.getPassword()));
+        }
 
         return toResponseDTO(repository.save(existing));
     }
@@ -62,6 +69,13 @@ public class UserServiceImpl implements UserService {
         }
         repository.deleteById(id);
     }
+
+    @Override
+    public User findByEmail(String email) {
+        return repository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado com o email: " + email));
+    }
+
 
     private UserResponseDTO toResponseDTO(User entity) {
         return UserResponseDTO.builder()
